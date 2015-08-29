@@ -37,6 +37,7 @@ from datetime import datetime
 
 sys.stderr.write("Warning: this may have issues on some machines+Python version combinations to seg fault due to the callback in bin_statitics.\n\n")
 
+exp = [] # set up export
 class ThreadClass(threading.Thread):
     def run(self):
         return
@@ -69,12 +70,12 @@ class tune(gr.feval_dd):
             # message on stderr.  Not exactly helpful ;)
 
             new_freq = self.tb.set_next_freq()
-            
+
             # wait until msgq is empty before continuing
             while(self.tb.msgq.full_p()):
                 #print "msgq full, holding.."
                 time.sleep(0.1)
-            
+
             return new_freq
 
         except Exception, e:
@@ -124,6 +125,8 @@ class my_top_block(gr.top_block):
                           help="Specify number of FFT bins [default=samp_rate/channel_bw]")
         parser.add_option("", "--real-time", action="store_true", default=False,
                           help="Attempt to enable real-time scheduling")
+        parser.add_option("-m", "--amp-multiply",type="eng_float",default=25.5,
+                          help="Specify maximum amplitude")
 
         (options, args) = parser.parse_args()
         if len(args) != 2:
@@ -134,6 +137,13 @@ class my_top_block(gr.top_block):
 
         self.min_freq = eng_notation.str_to_num(args[0])
         self.max_freq = eng_notation.str_to_num(args[1])
+
+        try:
+            if options.amp_multiply > 1 or options.amp_multiply <255:
+                self.amp_multiply = options.amp_multiply
+        except:
+            print 'amplification multiplier not valid'
+
 
         if self.min_freq > self.max_freq:
             # swap them
@@ -162,7 +172,7 @@ class my_top_block(gr.top_block):
         # Set the antenna
         if(options.antenna):
             self.u.set_antenna(options.antenna, 0)
-        
+
         if options.samp_rate is None:
             options.samp_rate = self.u.get_sample_rates().start()
 
@@ -173,9 +183,9 @@ class my_top_block(gr.top_block):
             self.fft_size = int(self.usrp_rate/self.channel_bandwidth)
         else:
             self.fft_size = options.fft_size
-        
+
         self.squelch_threshold = options.squelch_threshold
-        
+
         s2v = blocks.stream_to_vector(gr.sizeof_gr_complex, self.fft_size)
 
         mywindow = filter.window.blackmanharris(self.fft_size)
@@ -194,7 +204,7 @@ class my_top_block(gr.top_block):
         # This allows us to discard the bins on both ends of the spectrum.
 
         self.freq_step = self.nearest_freq((0.75 * self.usrp_rate), self.channel_bandwidth)
-        self.min_center_freq = self.min_freq + (self.freq_step/2) 
+        self.min_center_freq = self.min_freq + (self.freq_step/2)
         nsteps = math.ceil((self.max_freq - self.min_freq) / self.freq_step)
         self.max_center_freq = self.min_center_freq + (nsteps * self.freq_step)
 
@@ -241,7 +251,7 @@ class my_top_block(gr.top_block):
         @param target_freq: frequency in Hz
         @rypte: bool
         """
-        
+
         r = self.u.set_center_freq(target_freq)
         if r:
             return True
@@ -250,13 +260,13 @@ class my_top_block(gr.top_block):
 
     def set_gain(self, gain):
         self.u.set_gain(gain)
-    
+
     def nearest_freq(self, freq, channel_bandwidth):
         freq = round(freq / channel_bandwidth, 0) * channel_bandwidth
         return freq
 
 def main_loop(tb):
-    
+
     def bin_freq(i_bin, center_freq):
         #hz_per_bin = tb.usrp_rate / tb.fft_size
         freq = center_freq - (tb.usrp_rate / 2) + (tb.channel_bandwidth * i_bin)
@@ -264,7 +274,7 @@ def main_loop(tb):
         #freq = nearest_freq(freq, tb.channel_bandwidth)
         #print "freq rounded:",freq
         return freq
-    
+
     bin_start = int(tb.fft_size * ((1 - 0.75) / 2))
     bin_stop = int(tb.fft_size - bin_start)
 
@@ -287,8 +297,13 @@ def main_loop(tb):
             noise_floor_db = 10*math.log10(min(m.data)/tb.usrp_rate)
             power_db = 10*math.log10(m.data[i_bin]/tb.usrp_rate) - noise_floor_db
 
+            export = ''
+
             if (power_db > tb.squelch_threshold) and (freq >= tb.min_freq) and (freq <= tb.max_freq):
-                print datetime.now(), "center_freq", center_freq, "freq", freq, "power_db", power_db, "noise_floor_db", noise_floor_db
+                export = [freq/1000000,(power_db*tb.amp_multiply)]
+
+            if export != '':
+                exp.append(export)
 
 if __name__ == '__main__':
     t = ThreadClass()
@@ -300,4 +315,6 @@ if __name__ == '__main__':
         main_loop(tb)
 
     except KeyboardInterrupt:
-        pass
+        #print exp
+        print exp
+        #pass
