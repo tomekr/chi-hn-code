@@ -8,10 +8,8 @@ int clockPin = 3;
 LPD8806 strip = LPD8806(nLEDs, dataPin, clockPin);
 
 void setup() {
-  // Start up the LED strip
   strip.begin();
   Serial.begin(9600);
-  // Update the strip, to start they are all 'off'
   strip.show();
 }
 
@@ -21,11 +19,9 @@ void loop() {
 }
 
 void allChunks(uint8_t chunk, int array[6][2]){
-
   for(int count = 0; count < 6; count++){
     colorChooser(chunk, array[count][0]);
   }
-
 }//end colorChunk
 
 void colorChooser(uint8_t chunk, uint32_t frequency){
@@ -33,8 +29,6 @@ void colorChooser(uint8_t chunk, uint32_t frequency){
   uint32_t c;
 
   for(float fade = 5; fade < 127; fade++){
-    Serial.print(fade);
-    Serial.print("\n");
     if(frequency < 1000){
       i = 0;
       c = strip.Color(fade, 0, 0);
@@ -64,7 +58,7 @@ void colorChooser(uint8_t chunk, uint32_t frequency){
     chunkChooser(startSpot, c, chunk);
 
     strip.show();
-//    delay(0.0);
+
   }//end fade loop
 }//end color chooser
 
