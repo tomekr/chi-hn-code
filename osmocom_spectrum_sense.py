@@ -315,7 +315,7 @@ def main_loop(tb):
 
                     if extracted_freq not in test_range and extracted_amp not in test_range:
                         break
-                    export_string = ''.join([str(extracted_freq),'|',str(extracted_amp),'&'])
+                    export_string = ''.join([str(extracted_freq),'&',str(extracted_amp),'|'])
                     final_export.append(export_string)
                 else:
                     continue
