@@ -16,22 +16,15 @@ void setup() {
 }
 
 void loop() {
-  int data[] = { 1500, 2 };
+  int data[6][2] = {{ 500, 1 }, { 1500, 2 }, { 2500, 3 }, { 3500, 4 }, { 4500, 5 }, { 5500, 6 }};
   colorChunk(10, data);
 }
 
+void colorChunk(uint8_t chunk, int array[6][2]){
 
-
-void colorChunk(uint8_t chunk, int array[2]){
-  int frequency = array[0];
-  int amplitude = array[1];
-
-  colorChooser(chunk, 500);
-  colorChooser(chunk, 1500);
-  colorChooser(chunk, 2500);
-  colorChooser(chunk, 3500);
-  colorChooser(chunk, 4500);
-  colorChooser(chunk, 5500);
+  for(int count = 0; count < 6; count++){
+    colorChooser(chunk, array[count][0]);
+  }
 
 }//end colorChunk
 
