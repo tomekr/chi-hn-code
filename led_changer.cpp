@@ -17,10 +17,10 @@ void setup() {
 
 void loop() {
   int data[6][2] = {{ 500, 1 }, { 1500, 2 }, { 2500, 3 }, { 3500, 4 }, { 4500, 5 }, { 5500, 6 }};
-  colorChunk(10, data);
+  allChunks(10, data);
 }
 
-void colorChunk(uint8_t chunk, int array[6][2]){
+void allChunks(uint8_t chunk, int array[6][2]){
 
   for(int count = 0; count < 6; count++){
     colorChooser(chunk, array[count][0]);
