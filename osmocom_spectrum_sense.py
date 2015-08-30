@@ -35,6 +35,7 @@ import threading
 import time
 from datetime import datetime
 import serial # for exporting to arduinio
+import random as rd
 
 final_export = []
 start_time = int(time.time())
@@ -280,6 +281,7 @@ def main_loop(tb):
 
     export = ''
     export_string = ''
+    export_packet = []
 
     while 1:
 
@@ -292,14 +294,15 @@ def main_loop(tb):
         # m.raw_data is a string that contains the binary floats.
         # You could write this as binary to a file.
 
-        if (int(time.time())-start_time)% 5 == 0: # interval to collect data
-            output = ''.join(final_export)
-            if output == []: # catch data if the time difference is teh same between two consecutive collections
+        if (int(time.time())-start_time)% 3 == 0: # interval to collect data
+            rd.seed()
+            ind = rd.randint(0,len(final_export))
+            if export_packet == []:
                 return
             else:
-                print output # exports data
+                print final_export[ind]
                 #ser = serial.Serial('/dev/tty.usbserial', 9600) #wherever the port location
-                #ser.write(output)
+                #ser.write(final_export[ind])
 
         for i_bin in range(bin_start, bin_stop):
             center_freq = m.center_freq
@@ -316,9 +319,13 @@ def main_loop(tb):
                     if extracted_freq not in test_range and extracted_amp not in test_range:
                         break
                     export_string = ''.join([str(extracted_freq),'&',str(extracted_amp),'|'])
-                    if (len(final_export)+1) % 6 == 0 and len(final_export) != 1:
-                        export_string = ''.join([export_string,'$'])
-                    final_export.append(export_string)
+                    if len(export_packet) != 6:
+                        export_packet.append(export_string)
+                    else:
+                        export_packet = ''.join(export_packet)
+                        export_packet = ''.join([export_packet,'$'])
+                        final_export.append(export_packet)
+                        export_packet = []
                 else:
                     continue
 
