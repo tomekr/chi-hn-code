@@ -292,12 +292,14 @@ def main_loop(tb):
         # m.raw_data is a string that contains the binary floats.
         # You could write this as binary to a file.
 
-        if (int(time.time())-start_time)% 5 == 0: # interval to collect data
+        if (int(time.time())-start_time)% 10 == 0: # interval to collect data
             output = ''.join(final_export)
             if output == []: # catch data if the time difference is teh same between two consecutive collections
                 return
             else:
-                print output # exports data
+                #print output # exports data
+                ser = serial.Serial('/dev/tty.usbserial', 9600) #wherever the port location
+                ser.write(output)
 
         for i_bin in range(bin_start, bin_stop):
             center_freq = m.center_freq
@@ -307,7 +309,13 @@ def main_loop(tb):
 
             if (power_db > tb.squelch_threshold) and (freq >= tb.min_freq) and (freq <= tb.max_freq):
                 if power_db > 1:
-                    export_string = ''.join([str(int(freq/1000)),'|',str(int(1000*(power_db*tb.amp_multiply))),'&'])
+                    test_range = range(800,1200)
+                    extracted_freq = int(freq/100000)
+                    extracted_amp = 10*int(power_db*tb.amp_multiply)
+
+                    if extracted_freq not in test_range and extracted_amp not in test_range:
+                        break
+                    export_string = ''.join([str(extracted_freq),'|',str(extracted_amp),'&'])
                     final_export.append(export_string)
                 else:
                     continue
