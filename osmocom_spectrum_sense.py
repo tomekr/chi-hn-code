@@ -34,10 +34,13 @@ import struct
 import threading
 import time
 from datetime import datetime
+import serial # for exporting to arduinio
+
+final_export = []
+start_time = int(time.time())
 
 sys.stderr.write("Warning: this may have issues on some machines+Python version combinations to seg fault due to the callback in bin_statitics.\n\n")
 
-exp = [] # set up export
 class ThreadClass(threading.Thread):
     def run(self):
         return
@@ -81,7 +84,6 @@ class tune(gr.feval_dd):
         except Exception, e:
             print "tune: Exception: ", e
 
-
 class parse_msg(object):
     def __init__(self, msg):
         self.center_freq = msg.arg1()
@@ -92,7 +94,6 @@ class parse_msg(object):
         t = msg.to_string()
         self.raw_data = t
         self.data = struct.unpack('%df' % (self.vlen,), t)
-
 
 class my_top_block(gr.top_block):
 
@@ -126,7 +127,7 @@ class my_top_block(gr.top_block):
         parser.add_option("", "--real-time", action="store_true", default=False,
                           help="Attempt to enable real-time scheduling")
         parser.add_option("-m", "--amp-multiply",type="eng_float",default=25.5,
-                          help="Specify maximum amplitude")
+                          help="Specify amplitude multiplier")
 
         (options, args) = parser.parse_args()
         if len(args) != 2:
@@ -266,7 +267,6 @@ class my_top_block(gr.top_block):
         return freq
 
 def main_loop(tb):
-
     def bin_freq(i_bin, center_freq):
         #hz_per_bin = tb.usrp_rate / tb.fft_size
         freq = center_freq - (tb.usrp_rate / 2) + (tb.channel_bandwidth * i_bin)
@@ -277,6 +277,9 @@ def main_loop(tb):
 
     bin_start = int(tb.fft_size * ((1 - 0.75) / 2))
     bin_stop = int(tb.fft_size - bin_start)
+
+    export = ''
+    export_string = ''
 
     while 1:
 
@@ -289,32 +292,46 @@ def main_loop(tb):
         # m.raw_data is a string that contains the binary floats.
         # You could write this as binary to a file.
 
-        for i_bin in range(bin_start, bin_stop):
+        if (int(time.time())-start_time)% 10 == 0: # interval to collect data
+            output = ''.join(final_export)
+            if output == []: # catch data if the time difference is teh same between two consecutive collections
+                return
+            else:
+                #print output # exports data
+                ser = serial.Serial('/dev/tty.usbserial', 9600) #wherever the port location
+                ser.write(output)
 
+        for i_bin in range(bin_start, bin_stop):
             center_freq = m.center_freq
             freq = bin_freq(i_bin, center_freq)
-            #noise_floor_db = -174 + 10*math.log10(tb.channel_bandwidth)
             noise_floor_db = 10*math.log10(min(m.data)/tb.usrp_rate)
             power_db = 10*math.log10(m.data[i_bin]/tb.usrp_rate) - noise_floor_db
 
-            export = ''
-
             if (power_db > tb.squelch_threshold) and (freq >= tb.min_freq) and (freq <= tb.max_freq):
-                export = [freq/1000000,(power_db*tb.amp_multiply)]
+                if power_db > 1:
+                    test_range = range(800,1200)
+                    extracted_freq = int(freq/100000)
+                    extracted_amp = 10*int(power_db*tb.amp_multiply)
 
-            if export != '':
-                exp.append(export)
+                    if extracted_freq not in test_range and extracted_amp not in test_range:
+                        break
+                    export_string = ''.join([str(extracted_freq),'|',str(extracted_amp),'&'])
+                    final_export.append(export_string)
+                else:
+                    continue
 
 if __name__ == '__main__':
     t = ThreadClass()
     t.start()
 
     tb = my_top_block()
+
+    start_time = int(time.time())
     try:
         tb.start()
-        main_loop(tb)
+        while 1:
+            main_loop(tb)
+            final_export = []
 
     except KeyboardInterrupt:
-        #print exp
-        print exp
-        #pass
+        print ''.join(final_export) # final export
