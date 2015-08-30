@@ -294,7 +294,7 @@ def main_loop(tb):
         # m.raw_data is a string that contains the binary floats.
         # You could write this as binary to a file.
 
-        if (int(time.time())-start_time)% 3 == 0: # interval to collect data
+        if (int(time.time())-start_time)% 10 == 0: # interval to collect data
             rd.seed()
             ind = rd.randint(0,len(final_export))
             if export_packet == []:
