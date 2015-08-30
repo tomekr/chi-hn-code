@@ -30,7 +30,7 @@ void setup() {
   strip4.begin();
   strip5.begin();
   strip6.begin();
-
+  
   strip1.show();
   strip2.show();
   strip3.show();
@@ -109,7 +109,7 @@ void colorChooser(uint8_t chunk, int frequency){
 void parseMessage(String msg, int result[6][2]) {
   int pipeDelimeter = msg.indexOf('|');
   int packetDelimeter = msg.indexOf('&');
-
+  
   //String frequency = msg.substring(0, packetDelimeter);
 
   int index = 0;
@@ -118,18 +118,18 @@ void parseMessage(String msg, int result[6][2]) {
   int frequency;
   int power;
   String debug = "";
-
-
+  
+  
   while (msg.indexOf('&', previousPacketDelimeter) != -1) {
     int packetDelimeter = msg.indexOf('&',previousPacketDelimeter);
     int pipeDelimeter = msg.indexOf('|', previousPipeDelimeter);
-
+    
     debug = msg.substring(previousPipeDelimeter, packetDelimeter);
     //Serial.println(debug);
-
+    
     frequency = debug.toInt();
     //Serial.println(frequency);
-
+    
     debug = msg.substring(packetDelimeter+1, pipeDelimeter);
     //Serial.println(debug);
 
