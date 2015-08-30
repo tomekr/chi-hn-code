@@ -36,6 +36,8 @@ import time
 from datetime import datetime
 import serial
 
+final_export = []
+
 sys.stderr.write("Warning: this may have issues on some machines+Python version combinations to seg fault due to the callback in bin_statitics.\n\n")
 
 class ThreadClass(threading.Thread):
@@ -126,7 +128,7 @@ class my_top_block(gr.top_block):
         parser.add_option("", "--real-time", action="store_true", default=False,
                           help="Attempt to enable real-time scheduling")
         parser.add_option("-m", "--amp-multiply",type="eng_float",default=25.5,
-                          help="Specify maximum amplitude")
+                          help="Specify amplitude multiplier")
 
         (options, args) = parser.parse_args()
         if len(args) != 2:
@@ -301,32 +303,19 @@ def main_loop(tb):
             if (power_db > tb.squelch_threshold) and (freq >= tb.min_freq) and (freq <= tb.max_freq):
                 if power_db > 1:
                     export_string = ''.join([str(freq/1000000),'|',str(power_db*tb.amp_multiply),'$'])
+                    final_export.append(export_string)
                 else:
-                    export_string=''
+                    continue
 
-                export = ''.join([export,export_string])
-        #print export
-        return(export)
-
-# def run(tb):
-#     try:
-#         tb.start()
-#         print(main_loop(tb))
-#
-#     except KeyboardInterrupt:
-#         pass
 
 if __name__ == '__main__':
-    exp = []
     t = ThreadClass()
     t.start()
 
     tb = my_top_block()
-
     try:
         tb.start()
-        out = main_loop(tb)
-        print out
+        main_loop(tb)
 
     except KeyboardInterrupt:
-        pass
+        print ''.join(final_export) #export
