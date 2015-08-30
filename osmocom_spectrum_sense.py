@@ -34,10 +34,10 @@ import struct
 import threading
 import time
 from datetime import datetime
+import serial
 
 sys.stderr.write("Warning: this may have issues on some machines+Python version combinations to seg fault due to the callback in bin_statitics.\n\n")
 
-exp = [] # set up export
 class ThreadClass(threading.Thread):
     def run(self):
         return
@@ -266,7 +266,6 @@ class my_top_block(gr.top_block):
         return freq
 
 def main_loop(tb):
-
     def bin_freq(i_bin, center_freq):
         #hz_per_bin = tb.usrp_rate / tb.fft_size
         freq = center_freq - (tb.usrp_rate / 2) + (tb.channel_bandwidth * i_bin)
@@ -277,6 +276,9 @@ def main_loop(tb):
 
     bin_start = int(tb.fft_size * ((1 - 0.75) / 2))
     bin_stop = int(tb.fft_size - bin_start)
+
+    export = ''
+    export_string = ''
 
     while 1:
 
@@ -293,28 +295,38 @@ def main_loop(tb):
 
             center_freq = m.center_freq
             freq = bin_freq(i_bin, center_freq)
-            #noise_floor_db = -174 + 10*math.log10(tb.channel_bandwidth)
             noise_floor_db = 10*math.log10(min(m.data)/tb.usrp_rate)
             power_db = 10*math.log10(m.data[i_bin]/tb.usrp_rate) - noise_floor_db
 
-            export = ''
-
             if (power_db > tb.squelch_threshold) and (freq >= tb.min_freq) and (freq <= tb.max_freq):
-                export = [freq/1000000,(power_db*tb.amp_multiply)]
+                if power_db > 1:
+                    export_string = ''.join([str(freq/1000000),'|',str(power_db*tb.amp_multiply),'$'])
+                else:
+                    export_string=''
 
-            if export != '':
-                exp.append(export)
+                export = ''.join([export,export_string])
+        #print export
+        return(export)
+
+# def run(tb):
+#     try:
+#         tb.start()
+#         print(main_loop(tb))
+#
+#     except KeyboardInterrupt:
+#         pass
 
 if __name__ == '__main__':
+    exp = []
     t = ThreadClass()
     t.start()
 
     tb = my_top_block()
+
     try:
         tb.start()
-        main_loop(tb)
+        out = main_loop(tb)
+        print out
 
     except KeyboardInterrupt:
-        #print exp
-        print exp
-        #pass
+        pass
