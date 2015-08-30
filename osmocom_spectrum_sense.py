@@ -301,7 +301,7 @@ def main_loop(tb):
                 return
             else:
                 print final_export[ind]
-                #ser = serial.Serial('/dev/tty.usbserial', 9600) #wherever the port location
+                #ser = serial.Serial('/dev/tty.usbmodem1411', 9600) #wherever the port location
                 #ser.write(final_export[ind])
 
         for i_bin in range(bin_start, bin_stop):
@@ -318,10 +318,12 @@ def main_loop(tb):
 
                     if extracted_freq not in test_range and extracted_amp not in test_range:
                         break
-                    export_string = ''.join([str(extracted_freq),'&',str(extracted_amp),'|'])
+                    export_string = '&'.join([str(extracted_freq),str(extracted_amp)])
                     if len(export_packet) != 6:
+                        export_string += '$'
                         export_packet.append(export_string)
                     else:
+                        export_string += '|'
                         export_packet = ''.join(export_packet)
                         export_packet = ''.join([export_packet,'$'])
                         final_export.append(export_packet)
