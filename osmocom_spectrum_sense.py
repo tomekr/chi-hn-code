@@ -34,9 +34,10 @@ import struct
 import threading
 import time
 from datetime import datetime
-import serial
+import serial # for exporting to arduinio
 
 final_export = []
+start_time = int(time.time())
 
 sys.stderr.write("Warning: this may have issues on some machines+Python version combinations to seg fault due to the callback in bin_statitics.\n\n")
 
@@ -83,7 +84,6 @@ class tune(gr.feval_dd):
         except Exception, e:
             print "tune: Exception: ", e
 
-
 class parse_msg(object):
     def __init__(self, msg):
         self.center_freq = msg.arg1()
@@ -94,7 +94,6 @@ class parse_msg(object):
         t = msg.to_string()
         self.raw_data = t
         self.data = struct.unpack('%df' % (self.vlen,), t)
-
 
 class my_top_block(gr.top_block):
 
@@ -293,8 +292,14 @@ def main_loop(tb):
         # m.raw_data is a string that contains the binary floats.
         # You could write this as binary to a file.
 
-        for i_bin in range(bin_start, bin_stop):
+        if (int(time.time())-start_time)% 5 == 0: # interval to collect data
+            output = ''.join(final_export)
+            if output == []: # catch data if the time difference is teh same between two consecutive collections
+                return
+            else:
+                print output # exports data
 
+        for i_bin in range(bin_start, bin_stop):
             center_freq = m.center_freq
             freq = bin_freq(i_bin, center_freq)
             noise_floor_db = 10*math.log10(min(m.data)/tb.usrp_rate)
@@ -302,20 +307,23 @@ def main_loop(tb):
 
             if (power_db > tb.squelch_threshold) and (freq >= tb.min_freq) and (freq <= tb.max_freq):
                 if power_db > 1:
-                    export_string = ''.join([str(freq/1000000),'|',str(power_db*tb.amp_multiply),'$'])
+                    export_string = ''.join([str(int(freq/1000)),'|',str(int(1000*(power_db*tb.amp_multiply))),'&'])
                     final_export.append(export_string)
                 else:
                     continue
-
 
 if __name__ == '__main__':
     t = ThreadClass()
     t.start()
 
     tb = my_top_block()
+
+    start_time = int(time.time())
     try:
         tb.start()
-        main_loop(tb)
+        while 1:
+            main_loop(tb)
+            final_export = []
 
     except KeyboardInterrupt:
-        print ''.join(final_export) #export
+        print ''.join(final_export) # final export
